@@ -1,12 +1,14 @@
 import { Stack, useRouter, useSearchParams } from "expo-router";
+import { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
+  View,
+  Text,
   SafeAreaView,
   ScrollView,
-  Text,
-  View,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
-import useFetch from "../../hook/useFetch";
+
 import {
   Company,
   JobAbout,
@@ -15,43 +17,53 @@ import {
   ScreenHeaderBtn,
   Specifics,
 } from "../../components";
-import { COLORS, SIZES, icons } from "../../constants";
-import { RefreshControl } from "react-native";
-import { useState } from "react";
+import { COLORS, icons, SIZES } from "../../constants";
+import useFetch from "../../hook/useFetch";
 
-const tabs = ["About", "Qualification", "Responsibilites"];
+const tabs = ["About", "Qualifications", "Responsibilities"];
 
 const JobDetails = () => {
   const params = useSearchParams();
   const router = useRouter();
+
   const { data, isLoading, error, refetch } = useFetch("job-details", {
     job_id: params.id,
   });
 
+  const [activeTab, setActiveTab] = useState(tabs[0]);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setAciveTab] = useState(tabs[0]);
-  const onRefresh = () => {};
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    refetch();
+    setRefreshing(false);
+  }, []);
 
   const displayTabContent = () => {
     switch (activeTab) {
-      case "Qualication":
+      case "Qualifications":
         return (
           <Specifics
-            title="Qualification"
+            title="Qualifications"
             points={data[0].job_highlights?.Qualifications ?? ["N/A"]}
           />
         );
+
       case "About":
         return (
           <JobAbout info={data[0].job_description ?? "No data provided"} />
         );
-      case "Responsibilites":
+
+      case "Responsibilities":
         return (
           <Specifics
-            title="Responsibilites"
-            points={data[0].job_highlights?.Responsibilites ?? ["N/A"]}
+            title="Responsibilities"
+            points={data[0].job_highlights?.Responsibilities ?? ["N/A"]}
           />
         );
+
+      default:
+        return null;
     }
   };
 
@@ -60,21 +72,22 @@ const JobDetails = () => {
       <Stack.Screen
         options={{
           headerStyle: { backgroundColor: COLORS.lightWhite },
-          headerShadowVisible: false,
+          headerShadowVisible: true,
           headerBackVisible: false,
-          headerLeft: () => {
+          headerLeft: () => (
             <ScreenHeaderBtn
               iconUrl={icons.left}
               dimension="60%"
               handlePress={() => router.back()}
-            />;
-          },
-          headerRight: () => {
-            <ScreenHeaderBtn iconUrl={icons.share} dimension="60%" />;
-          },
+            />
+          ),
+          headerRight: () => (
+            <ScreenHeaderBtn iconUrl={icons.share} dimension="60%" />
+          ),
           headerTitle: "",
         }}
       />
+
       <>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -83,11 +96,11 @@ const JobDetails = () => {
           }
         >
           {isLoading ? (
-            <ActivityIndicator size={"large"} color={COLORS.primary} />
+            <ActivityIndicator size="large" color={COLORS.primary} />
           ) : error ? (
-            <Text>Somthing went wrong</Text>
+            <Text>Something went wrong</Text>
           ) : data.length === 0 ? (
-            <Text>No Data</Text>
+            <Text>No data available</Text>
           ) : (
             <View style={{ padding: SIZES.medium, paddingBottom: 100 }}>
               <Company
@@ -96,19 +109,22 @@ const JobDetails = () => {
                 companyName={data[0].employer_name}
                 location={data[0].job_country}
               />
+
               <JobTabs
                 tabs={tabs}
                 activeTab={activeTab}
-                setAciveTab={setAciveTab}
+                setActiveTab={setActiveTab}
               />
+
               {displayTabContent()}
             </View>
           )}
         </ScrollView>
+
         <JobFooter
           url={
             data[0]?.job_google_link ??
-            "https://careers.google.com/jobs/results"
+            "https://careers.google.com/jobs/results/"
           }
         />
       </>
